@@ -184,14 +184,14 @@ vocabLearnButton4.style.fontFamily = 'Courier New, monospace';
 vocabLearnButton4.onclick = function() {
     async function fetchFrenchAnswer(englishWord) {
         const script = Array.from(document.querySelectorAll("script"))
-        .find(s => s.src.includes("/static/js/data.js"));
-
+          .find(s => s.src.includes("/static/js/data.js"));
+      
         const url = script?.src;
+        if (!url) throw new Error("Could not find data.js URL");
       
         const response = await fetch(url);
         const text = await response.text();
       
-        // Extract ACTIVITY_DATA object from the JavaScript
         const match = text.match(/ACTIVITY_DATA\s*=\s*(\{[\s\S]*?\});?\s*$/);
         if (!match || match.length < 2) {
           throw new Error("ACTIVITY_DATA object not found or malformed.");
@@ -200,31 +200,45 @@ vocabLearnButton4.onclick = function() {
         const activityDataRaw = match[1];
         const activityData = Function('"use strict";return (' + activityDataRaw + ')')();
       
-        // Search for the French answer
+        // 🔧 Define once outside loop
+        function extractCleanAnswer(val4 = "") {
+            // Match between the first and last matching quote (including curly quotes)
+            const match = val4.match(/^(?:The answer is\s*)?['"“”‘’](.*)['"“”‘’]\.?$/);
+            if (match) return match[1].trim();
+          
+            // If no match, return the full string after removing the prefix
+            return val4.replace(/^The answer is\s*/i, "").trim();
+          }
+          
+      
+        // 🔍 Search for the French answer
         for (const key in activityData) {
-          const activities = JSON.parse(activityData[key]); // stringified array
+          const activities = JSON.parse(activityData[key]);
           for (const activity of activities) {
             const translations = activity.translation_text?.[0]?.val1?.toLowerCase().split("||");
             if (translations?.some(w => w.replace(/\W/g, "") === englishWord.replace(/\W/g, "").toLowerCase())) {
-              const fullAnswer = activity.target_language_text?.[0]?.val4;
-              const first = fullAnswer.indexOf("'");
-          const last  = fullAnswer.lastIndexOf("'");
-          const clean = (first !== -1 && last !== -1 && last > first)
-            ? fullAnswer.substring(first + 1, last)
-            : fullAnswer;
-          return clean;
+              const fullAnswer = activity.target_language_text?.[0]?.val4 || "";
+              const clean = extractCleanAnswer(fullAnswer);
+              return clean;
             }
           }
         }
       
         return "Answer not found.";
-    }
-
-    const content = document.querySelectorAll('.mCSB_container')[0].innerText;
-    const lines = content.split(/\n/);
-    const activityName = lines.filter(line => line.trim() !== "" && !line.toLowerCase().includes("submit") && !line.toLowerCase().includes("progress"))[0];
-    
-    fetchFrenchAnswer(activityName).then((answer) => {document.querySelector('#userInputText').innerText = answer}).catch(console.error);
+      }
+      
+      // 🧠 Get current English word
+      const content = document.querySelectorAll('.mCSB_container')[0].innerText;
+      const lines = content.split(/\n/);
+      const activityName = lines.filter(line =>
+        line.trim() !== "" &&
+        !line.toLowerCase().includes("submit") &&
+        !line.toLowerCase().includes("progress")
+      )[0];
+      
+      fetchFrenchAnswer(activityName).then(answer => {
+        document.querySelector('#userInputText').innerText = answer;
+      }).catch(console.error);
 };
 
 
