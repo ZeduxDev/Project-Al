@@ -111,7 +111,7 @@ vocabLearnButton.onclick = function() {
 		console.log(text);
 	} else {
 		console.error(`Container at index ${containerIndex} does not exist.`);
-		alert("Error this is not my side this error is active learn being dumb")
+		alert("Error this is not my side this error is you not listening to what i said (or i might have forgot to say it XD)")
 	}
 };
 panel.appendChild(vocabLearnButton);
@@ -172,10 +172,66 @@ vocabLearnButton3.onclick = function() {
     });      
 };
 
+const vocabLearnButton4 = document.createElement('button');
+vocabLearnButton4.textContent = 'Question Type 2 Hack';
+vocabLearnButton4.style.width = '100%';
+vocabLearnButton4.style.marginTop = '5px';
+vocabLearnButton4.style.backgroundColor = '#333';
+vocabLearnButton4.style.color = '#00ff00';
+vocabLearnButton4.style.border = '1px solid #00ff00';
+vocabLearnButton4.style.padding = '5px';
+vocabLearnButton4.style.fontFamily = 'Courier New, monospace';
+vocabLearnButton4.onclick = function() {
+    async function fetchFrenchAnswer(englishWord) {
+        const script = Array.from(document.querySelectorAll("script"))
+        .find(s => s.src.includes("/static/js/data.js"));
+
+        const url = script?.src;
+      
+        const response = await fetch(url);
+        const text = await response.text();
+      
+        // Extract ACTIVITY_DATA object from the JavaScript
+        const match = text.match(/ACTIVITY_DATA\s*=\s*(\{[\s\S]*?\});?\s*$/);
+        if (!match || match.length < 2) {
+          throw new Error("ACTIVITY_DATA object not found or malformed.");
+        }
+      
+        const activityDataRaw = match[1];
+        const activityData = Function('"use strict";return (' + activityDataRaw + ')')();
+      
+        // Search for the French answer
+        for (const key in activityData) {
+          const activities = JSON.parse(activityData[key]); // stringified array
+          for (const activity of activities) {
+            const translations = activity.translation_text?.[0]?.val1?.toLowerCase().split("||");
+            if (translations?.some(w => w.replace(/\W/g, "") === englishWord.replace(/\W/g, "").toLowerCase())) {
+              const fullAnswer = activity.target_language_text?.[0]?.val4;
+              const first = fullAnswer.indexOf("'");
+          const last  = fullAnswer.lastIndexOf("'");
+          const clean = (first !== -1 && last !== -1 && last > first)
+            ? fullAnswer.substring(first + 1, last)
+            : fullAnswer;
+          return clean;
+            }
+          }
+        }
+      
+        return "Answer not found.";
+    }
+
+    const content = document.querySelectorAll('.mCSB_container')[0].innerText;
+    const lines = content.split(/\n/);
+    const activityName = lines.filter(line => line.trim() !== "" && !line.toLowerCase().includes("submit") && !line.toLowerCase().includes("progress"))[0];
+    
+    fetchFrenchAnswer(activityName).then((answer) => {document.querySelector('#userInputText').innerText = answer}).catch(console.error);
+};
+
 
 panel.appendChild(vocabLearnButton);
 panel.appendChild(vocabLearnButton2);
 panel.appendChild(vocabLearnButton3);
+panel.appendChild(vocabLearnButton4);
 
 // Append the mod panel to the body
 document.body.appendChild(panel);
